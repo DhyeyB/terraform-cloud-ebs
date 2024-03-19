@@ -56,8 +56,10 @@ jobs:
           while [ "$status" != "running" ]; do
           status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[0].Instances[0].State.Name" --output text)
           if [ "$status" != "running" ]; then
-              echo "Instance not yet ready, waiting..."
+              echo "Instance not yet running, waiting..."
               sleep 10
+          else
+              echo "Instance is in running state"
           fi
           done
 
