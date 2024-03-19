@@ -51,7 +51,7 @@ jobs:
 
       - name: Wait for EC2 instance readiness and userdata completion
         run: |
-          instance_id=$(terraform output ec2_instance_id)
+          instance_id=$(terraform output ec2_instance_id | sed 's/"//g')
           status=""
           while [ "$status" != "running" ]; do
           status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[0].Instances[0].State.Name" --output text)
