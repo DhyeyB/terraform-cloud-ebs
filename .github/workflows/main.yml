@@ -70,6 +70,8 @@ jobs:
           if [ -z "$userdata_complete" ]; then
               echo "Userdata not yet completed, waiting..."
               sleep 10
+          else
+              echo "Userdata completed"
           fi
           done
 
