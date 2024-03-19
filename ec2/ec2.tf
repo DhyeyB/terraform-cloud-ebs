@@ -137,8 +137,6 @@ resource "aws_instance" "ec2_server" {
     sudo snap install --classic certbot
     sudo ln -s /snap/bin/certbot /usr/bin/certbot
 
-    echo "userdata completed"
-
     touch /home/deploy/deploy_complete.txt
     EOF
 
