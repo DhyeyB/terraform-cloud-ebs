@@ -1,0 +1,161 @@
+name: Deploy to Amazon EBS
+
+on:
+  push:
+    branches: ["main", "staging"]
+
+permissions:
+  contents: read
+
+jobs:
+#   env-selector:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - id: env-condition
+#         run: |
+#           if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == 'refs/heads/main' ]
+#           then
+#             echo "environment=prod" >> $GITHUB_OUTPUT
+#             echo "app_name=ep-backend" >> $GITHUB_OUTPUT
+#             echo "set to prod"
+#           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == 'refs/heads/staging' ]
+#           then
+#             echo "environment=staging" >> $GITHUB_OUTPUT
+#             echo "app_name=ep-backend" >> $GITHUB_OUTPUT
+#             echo "set to staging"
+#           fi
+
+#     # Map a step output to a job output
+#     outputs:
+#       env: ${{ steps.env-condition.outputs.environment}}
+#       app: ${{ steps.env-condition.outputs.app_name}}
+
+  infra-deploy:
+    name: Infrastructure Deployment
+    # needs:
+    #   - env-selector
+    runs-on: ubuntu-latest
+    # environment:
+    #   name: ${{needs.env-selector.outputs.env}}
+    # outputs:
+    #   ecommpulse_backend_server_ip: ${{steps.terraform-backup.outputs.ecommpulse_backend_server_ip}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Terraform setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: "${{ secrets.ACCESS_KEY }}"
+          aws-secret-access-key: "${{ secrets.SECRET_KEY }}"
+          aws-region: "${{ secrets.AWS_REGION }}"
+
+      - name: Get Terraform Variables
+        env:
+        #   APP_ENV: ${{needs.env-selector.outputs.env}}
+        #   APP_NAME: ${{needs.env-selector.outputs.app}}
+          aws-access-key-id: "${{ secrets.ACCESS_KEY }}"
+          aws-secret-access-key: "${{ secrets.SECRET_KEY }}"
+        run: |
+          mkdir .aws
+          cd .aws
+          printf "[default] \n aws_access_key_id = %s \n aws_secret_access_key = %s" ${{ secrets.AWS_ACCESS_KEY_ID }} ${{ secrets.AWS_SECRET_ACCESS_KEY }} > credentials
+        #   cd ..
+        #   aws s3 cp s3://$APP_NAME-${APP_ENV}-tf-variables/backend_$APP_ENV.tfvars ./vars.tfvars
+
+    #   - name: Get Terraform Backup Files
+    #     env:
+    #       APP_ENV: ${{needs.env-selector.outputs.env}}
+    #       APP_NAME: ${{needs.env-selector.outputs.app}}
+    #     run: |
+    #       aws s3 cp s3://$APP_NAME-${APP_ENV}-tf-variables/terraform-backup-$APP_ENV/ ./terraform --recursive --exclude '*' --include '.terraform*' --include 'terraform.*'
+
+      - name: Terraform Initialization
+        run: |
+            pwd
+            terraform -chdir=terraform init -reconfigure -var-file=terraform.tfvars
+
+      - id: terraform-apply
+        name: Terraform Apply
+        run: |
+            terraform -chdir=terraform apply -input=false -auto-approve -var-file=terraform.tfvars
+
+    #   - name: Terraform Back Up
+    #     id: terraform-backup
+    #     if: always()
+    #     env:
+    #       APP_ENV: ${{needs.env-selector.outputs.env}}
+    #       APP_NAME: ${{needs.env-selector.outputs.app}}
+    #     run: |
+    #       if git diff --quiet --exit-code ${{ github.sha }}^ ${{ github.sha }} -- terraform/; then
+    #         echo "No changes in 'terraform/' directory. Skipping Terraform Backup."
+    #       else
+    #         aws s3 cp ./terraform s3://$APP_NAME-${APP_ENV}-tf-variables/terraform-backup-$APP_ENV/ --recursive --exclude '*' --include 'terraform.*'
+    #       fi
+    #       echo "ecommpulse_backend_server_ip=$(terraform -chdir=terraform output ecommpulse_backend_server_ip)" >> $GITHUB_OUTPUT
+
+      - name: Teraform Apply Status Check
+        if: steps.terraform-apply.outcome == 'failure'
+        run: |
+          exit 1
+
+#   code-deploy:
+#     name: Code Deploy
+#     needs:
+#       - env-selector
+#       - infra-deploy
+#     runs-on: ubuntu-latest
+#     environment:
+#       name: ${{needs.env-selector.outputs.env}}
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v3
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v1
+#         with:
+#           aws-access-key-id: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+#           aws-secret-access-key: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+#           aws-region: "${{ secrets.AWS_REGION }}"
+
+#       - name: Build & Deploy of ecommpulse backend code
+#         env:
+#           PRIVATE_KEY: |
+#             ${{ secrets.LOGIN_SSH_PRI_KEY }}
+#           HOSTNAME: ${{ needs.infra-deploy.outputs.ecommpulse_backend_server_ip }}
+#           USER_NAME: "deploy"
+#           APP_ENV: ${{needs.env-selector.outputs.env}}
+#         run: |
+#           ecommpulse_backend_server_ip=$(echo ${{ needs.infra-deploy.outputs.ecommpulse_backend_server_ip }} | sed 's/"//g')
+#           APP_ENV=$(echo ${{needs.env-selector.outputs.env }})
+#           echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+#           ssh -o StrictHostKeyChecking=no -i private_key deploy@${ecommpulse_backend_server_ip} '
+#             mkdir -p /home/deploy/.aws
+#             cd /home/deploy/.aws
+#             printf "[default] \n aws_access_key_id = %s \n aws_secret_access_key = %s" ${{ secrets.AWS_ACCESS_KEY_ID }} ${{ secrets.AWS_SECRET_ACCESS_KEY }} > credentials
+#             printf "[default] \n region = %s" ${{ secrets.AWS_REGION }} > config
+#             DEST_DIR="/opt/ecommpulse/apps"
+#             mkdir -p $DEST_DIR
+#             cd $DEST_DIR
+#             if [ ! -d "ecomm-pulse-backend" ]; then
+#               GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" && git clone git@github.com:Edugem-Technologies/ecomm-pulse-backend.git
+#             fi
+#             wait
+#             cd ecomm-pulse-backend
+#             git checkout "${{ needs.env-selector.outputs.env }}"
+#             git stash
+#             git pull
+#             echo 'ecomm-pulse-admin:\$apr1\$7pDQk8T6\$'${{secrets.SWAGGER_AUTH_KEY}} > .htpasswd
+#             echo "export APP_ENV=$APP_ENV" >> ~/.bashrc
+#             source ~/.bashrc
+#             sudo chmod 744 deploy.sh
+#             ./deploy.sh
+#             '
