@@ -81,12 +81,12 @@ jobs:
       - name: Terraform Initialization
         run: |
             pwd
-            terraform init -reconfigure
+            terraform init
 
       - id: terraform-apply
         name: Terraform Apply
         run: |
-            terraform apply -input=false -auto-approve
+            terraform apply -auto-approve
 
     #   - name: Terraform Back Up
     #     id: terraform-backup
