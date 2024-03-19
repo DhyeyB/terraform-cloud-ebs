@@ -136,7 +136,8 @@ resource "aws_instance" "ec2_server" {
     sudo snap install core; sudo snap refresh core
     sudo snap install --classic certbot
     sudo ln -s /snap/bin/certbot /usr/bin/certbot
-
+    
+    touch /home/deploy/deploy_complete.txt
     EOF
 
   tags = {
