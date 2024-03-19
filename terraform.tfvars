@@ -1,0 +1,18 @@
+app_name                     = "scanapp"
+environment                  = "prod"
+aws_region                   = "ap-south-1"
+instance_name                = "scanapp-prod"
+ingress_ports                = [22, 80, 443]
+instance_ami                 = "ami-03bb6d83c60fc5f7c"
+ec2_instance_type            = "t2.micro"
+rsa_key_1                    = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDJ8nPXay1Ehev25ls+QWIVj0JWv1w1lz5S+pbezzPPqY3uxdrhW2aTLcEd2d8L/Fjfq36nHap3aqYJpZLopwSAv6r7rFxrHfvDiIfjZznDJpGbfp2+jEiCcgXZp90Z4OxJQ65REKQeOddkAHqrsipljtv71w2AcLpTNWCcl/G+M5PNgH3nqehQW4Nsd931SiMle3mlJf72zSeI+2UU05ELToeAjViRWFEVDZZZbBPfjOs/GrtInyW4FXvQ3e2Ie16IqCmSfzJ7Ka/trYD6l3uV0ANO89pE8v0bWP/bM8E2OGQ3P0+V0mIFgA0/X/4evf5AL1hHx5V6Kpev3qWZp49eWFkPu3bTMOg36ILcT8aohsxurEc9OqvdR2CojNTXgXYjpv72rEa5gk0QvhEIBd7FYz+/cpe3AUVsxPInv7o1F+f+NJAVAcezlJCc3gp8MAaGTWQcLFuM5rOxnoNB/JoghZGLkfJovn/2GqphmUFH1o/ty56VMkUDMLPP6ELyjU0= bs@bs-HP-Pavilion-Laptop-14-dv2xxx"
+db_user                      = "scanapp_root_prod"
+db_name                      = "scanapp_prod"
+db_password                  = "UeFnMpC39w5PDN8s"
+ebs_instance_disk_size       = "10"
+format_db_volume             = "yes"
+ebs_type                     = "gp3"
+assume_role_policy_file_path = "assume_role_policy.json"
+execution_policy_file_path   = "execution_role_policy.json"
+ebs_snapshot                 = "yes"
+retention_period             = 7
