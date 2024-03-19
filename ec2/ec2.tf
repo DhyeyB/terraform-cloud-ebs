@@ -136,7 +136,7 @@ resource "aws_instance" "ec2_server" {
     sudo snap install core; sudo snap refresh core
     sudo snap install --classic certbot
     sudo ln -s /snap/bin/certbot /usr/bin/certbot
-    
+
     touch /home/deploy/deploy_complete.txt
     EOF
 
@@ -153,32 +153,32 @@ resource "aws_eip" "server_elastic_ip" {
   }
 }
 
-resource "null_resource" "wait_for_user_data" {
-  depends_on = [aws_instance.ec2_server]
+# resource "null_resource" "wait_for_user_data" {
+#   depends_on = [aws_instance.ec2_server]
 
-  triggers = {
-    instance_id = aws_instance.ec2_server.id
-  }
+#   triggers = {
+#     instance_id = aws_instance.ec2_server.id
+#   }
 
-  provisioner "local-exec" {
-    command = <<-EOT
-      result=0
-      timeout --preserve-status 4m bash -c '
-        while [ ! -f /home/deploy/deploy_complete.txt ]; do
-          sleep 10
-        done
-      ' || result=$?
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#       result=0
+#       timeout --preserve-status 4m bash -c '
+#         while [ ! -f /home/deploy/deploy_complete.txt ]; do
+#           sleep 10
+#         done
+#       ' || result=$?
 
-      if [ $result -eq 124 ]; then
-        echo "Timeout reached. Synchronization file not found."
-        # Handle the timeout error gracefully here, if needed
-      elif [ $result -ne 0 ]; then
-        echo "An error occurred while waiting for the synchronization file."
-        # Handle other non-timeout errors gracefully here, if needed
-      else
-        echo "Synchronization file found. Proceeding with further steps."
-        # Perform additional steps here
-      fi
-    EOT
-  }
-}
+#       if [ $result -eq 124 ]; then
+#         echo "Timeout reached. Synchronization file not found."
+#         # Handle the timeout error gracefully here, if needed
+#       elif [ $result -ne 0 ]; then
+#         echo "An error occurred while waiting for the synchronization file."
+#         # Handle other non-timeout errors gracefully here, if needed
+#       else
+#         echo "Synchronization file found. Proceeding with further steps."
+#         # Perform additional steps here
+#       fi
+#     EOT
+#   }
+# }

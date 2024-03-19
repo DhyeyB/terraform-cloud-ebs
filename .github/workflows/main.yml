@@ -63,7 +63,7 @@ jobs:
 
           # Wait for the marker file indicating userdata completion
           userdata_complete=""
-          instance_ip=$(terraform output ec2_server_ip)
+          instance_ip=$(terraform output ec2_server_ip | sed 's/"//g')
           echo "${{ secrets.LOGIN_SSH_PRI_KEY }}" > private_key && chmod 600 private_key
           while [ -z "$userdata_complete" ]; do
           userdata_complete=$(ssh -o StrictHostKeyChecking=no -i private_key deploy@${instance_ip} '[ -f /home/deploy/deploy_complete.txt ] && echo "true" || echo ""')
