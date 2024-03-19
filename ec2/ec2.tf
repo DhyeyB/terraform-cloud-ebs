@@ -137,7 +137,6 @@ resource "aws_instance" "ec2_server" {
     sudo snap install --classic certbot
     sudo ln -s /snap/bin/certbot /usr/bin/certbot
 
-    echo "I like this way to mount ebs"
     EOF
 
   tags = {
