@@ -65,16 +65,30 @@ jobs:
 
           # Wait for the marker file indicating userdata completion
           userdata_complete=""
-          instance_ip=$(terraform output ec2_server_ip | sed 's/"//g')
+          instance_ip=$(terraform output -raw ec2_server_ip)
           echo "${{ secrets.LOGIN_SSH_PRI_KEY }}" > private_key && chmod 600 private_key
+          login_attempts=0
+          max_login_attempts=5  # Adjust as needed
           while [ -z "$userdata_complete" ]; do
-          userdata_complete=$(ssh -o StrictHostKeyChecking=no -i private_key deploy@${instance_ip} '[ -f /home/deploy/deploy_complete.txt ] && echo "true" || echo ""')
-          if [ -z "$userdata_complete" ]; then
-              echo "Userdata not yet completed, waiting..."
+            if [ $login_attempts -eq $max_login_attempts ]; then
+              echo "Max login attempts reached. Exiting..."
+              exit 1
+            fi
+            login_attempts=$((login_attempts + 1))
+            echo "Attempt $login_attempts to SSH into the instance..."
+            ssh_output=$(ssh -o StrictHostKeyChecking=no -i private_key deploy@${instance_ip} '[ -f /home/deploy/deploy_complete.txt ] && echo "true" || echo ""' 2>&1)
+            if [ $? -eq 0 ]; then
+              userdata_complete=$(echo "$ssh_output" | grep "true")
+              if [ -z "$userdata_complete" ]; then
+                echo "Userdata not yet completed, waiting..."
+                sleep 10
+              else
+                echo "Userdata completed"
+              fi
+            else
+              echo "Error: Failed to SSH into the instance. Retrying..."
               sleep 10
-          else
-              echo "Userdata completed"
-          fi
+            fi
           done
 
       - name: Teraform Apply Status Check
