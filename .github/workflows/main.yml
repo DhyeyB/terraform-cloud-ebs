@@ -47,49 +47,49 @@ jobs:
       - id: terraform-apply
         name: Terraform Apply
         run: |
-          terraform apply -auto-approve -var="access_key=${{ secrets.ACCESS_KEY }}" -var="secret_key=${{ secrets.SECRET_KEY }}"
+          terraform destroy -auto-approve -var="access_key=${{ secrets.ACCESS_KEY }}" -var="secret_key=${{ secrets.SECRET_KEY }}"
 
-      - name: Wait for EC2 instance readiness and userdata completion
-        run: |
-          instance_id=$(terraform output ec2_instance_id | sed 's/"//g')
-          status=""
-          while [ "$status" != "running" ]; do
-          status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[0].Instances[0].State.Name" --output text)
-          if [ "$status" != "running" ]; then
-              echo "Instance not yet running, waiting..."
-              sleep 10
-          else
-              echo "Instance is in running state"
-          fi
-          done
+    #   - name: Wait for EC2 instance readiness and userdata completion
+    #     run: |
+    #       instance_id=$(terraform output ec2_instance_id | sed 's/"//g')
+    #       status=""
+    #       while [ "$status" != "running" ]; do
+    #       status=$(aws ec2 describe-instances --instance-ids $instance_id --query "Reservations[0].Instances[0].State.Name" --output text)
+    #       if [ "$status" != "running" ]; then
+    #           echo "Instance not yet running, waiting..."
+    #           sleep 10
+    #       else
+    #           echo "Instance is in running state"
+    #       fi
+    #       done
 
-          # Wait for the marker file indicating userdata completion
-          userdata_complete=""
-          instance_ip=$(terraform output -raw ec2_server_ip)
-          echo "${{ secrets.LOGIN_SSH_PRI_KEY }}" > private_key && chmod 600 private_key
-          login_attempts=0
-          max_login_attempts=5  # Adjust as needed
-          while [ -z "$userdata_complete" ]; do
-            if [ $login_attempts -eq $max_login_attempts ]; then
-              echo "Max login attempts reached. Exiting..."
-              exit 1
-            fi
-            login_attempts=$((login_attempts + 1))
-            echo "Attempt $login_attempts to SSH into the instance..."
-            ssh_output=$(ssh -o StrictHostKeyChecking=no -i private_key deploy@${instance_ip} '[ -f /home/deploy/deploy_complete.txt ] && echo "true" || echo ""' 2>&1)
-            if [ $? -eq 0 ]; then
-              userdata_complete=$(echo "$ssh_output" | grep "true")
-              if [ -z "$userdata_complete" ]; then
-                echo "Userdata not yet completed, waiting..."
-                sleep 10
-              else
-                echo "Userdata completed"
-              fi
-            else
-              echo "Error: Failed to SSH into the instance. Retrying..."
-              sleep 10
-            fi
-          done
+    #       # Wait for the marker file indicating userdata completion
+    #       userdata_complete=""
+    #       instance_ip=$(terraform output -raw ec2_server_ip)
+    #       echo "${{ secrets.LOGIN_SSH_PRI_KEY }}" > private_key && chmod 600 private_key
+    #       login_attempts=0
+    #       max_login_attempts=5  # Adjust as needed
+    #       while [ -z "$userdata_complete" ]; do
+    #         if [ $login_attempts -eq $max_login_attempts ]; then
+    #           echo "Max login attempts reached. Exiting..."
+    #           exit 1
+    #         fi
+    #         login_attempts=$((login_attempts + 1))
+    #         echo "Attempt $login_attempts to SSH into the instance..."
+    #         ssh_output=$(ssh -o StrictHostKeyChecking=no -i private_key deploy@${instance_ip} '[ -f /home/deploy/deploy_complete.txt ] && echo "true" || echo ""' 2>&1)
+    #         if [ $? -eq 0 ]; then
+    #           userdata_complete=$(echo "$ssh_output" | grep "true")
+    #           if [ -z "$userdata_complete" ]; then
+    #             echo "Userdata not yet completed, waiting..."
+    #             sleep 10
+    #           else
+    #             echo "Userdata completed"
+    #           fi
+    #         else
+    #           echo "Error: Failed to SSH into the instance. Retrying..."
+    #           sleep 10
+    #         fi
+    #       done
 
       - name: Teraform Apply Status Check
         if: steps.terraform-apply.outcome == 'failure'
